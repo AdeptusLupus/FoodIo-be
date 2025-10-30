@@ -11,7 +11,6 @@ permissions:
 jobs:
   check-commits:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,11 +20,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr view ${{ github.event.pull_request.number }} \
-            --json commits -q '.commits[].message' | jq -r '.' > commits.txt
+          set -e
+          echo "Fetching commits for PR #${{ github.event.pull_request.number }}"
 
-          echo "🔍 Commit messages fetched:"
-          cat commits.txt
+          # This ensures no pagination/truncation
+          gh pr view ${{ github.event.pull_request.number }} \
+            --json commits --jq '.commits[].oid + " " + .commits[].messageHeadline' > commits.txt || true
+
+          echo "✅ Commit messages fetched:"
+          cat commits.txt || echo "(no commits found)"
 
       - name: Validate Jira IDs and Build Markdown Summary
         id: jira
@@ -40,14 +43,16 @@ jobs:
           FAIL=0
           SUMMARY="### 🧾 Commits and Related Jira Issues\n\n"
           declare -A SEEN
+          COUNT=0
 
           while IFS= read -r line; do
             CLEAN_LINE=$(echo "$line" | tr -d '\r' | xargs)
             [ -z "$CLEAN_LINE" ] && continue
+            ((COUNT++))
 
             IDS=$(echo "$CLEAN_LINE" | grep -Eo "$JIRA_REGEX" || true)
             if [ -z "$IDS" ]; then
-              echo "❌ Commit message missing Jira ID: $CLEAN_LINE"
+              echo "❌ Commit missing Jira ID: $CLEAN_LINE"
               FAIL=1
               continue
             fi
@@ -57,7 +62,7 @@ jobs:
                 continue
               fi
 
-              echo "🔍 Checking Jira issue $ID..."
+              echo "🔍 Validating Jira issue: $ID"
               RESPONSE=$(curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
                 -w "%{http_code}" -o /tmp/jira.json \
                 "$JIRA_BASE_URL/rest/api/3/issue/$ID")
@@ -73,12 +78,19 @@ jobs:
             done
           done < commits.txt
 
+          echo "Total commits processed: $COUNT"
+          echo -e "$SUMMARY"
+
           if [ $FAIL -eq 1 ]; then
             echo "❌ Some commits are missing valid Jira IDs."
             exit 1
           fi
 
-          echo "✅ All commits have valid Jira IDs."
+          if [ $COUNT -eq 0 ]; then
+            echo "⚠️ No commits found in PR."
+            exit 0
+          fi
+
           {
             echo "summary<<EOF"
             echo -e "$SUMMARY"
@@ -90,7 +102,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
           BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body)
           CLEAN_BODY=$(echo "$BODY" | sed '/### 🧾 Commits and Related Jira Issues/,$d')
-          UPDATED_BODY="${CLEAN_BODY}\n\n${{ steps.jira.outputs.summary }}"
+          SUMMARY="${{ steps.jira.outputs.summary }}"
+          UPDATED_BODY="${CLEAN_BODY}\n\n${SUMMARY}"
           echo -e "$UPDATED_BODY" | gh pr edit ${{ github.event.pull_request.number }} --body -
