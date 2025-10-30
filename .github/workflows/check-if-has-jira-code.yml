@@ -1,35 +1,87 @@
-name: Check Jira Code in Commits
+name: Check Jira Code in Commits and Update PR
 
 on:
-    pull_request:
-        types: [opened, synchronize, reopened, edited]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
-    check-commits:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+  check-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Get all commit messages in PR
-              id: commits
-              run: |
-                  COMMITS=$(gh pr view ${{ github.event.pull_request.number }} --json commits -q ".commits[].message")
-                  echo "$COMMITS" > commits.txt
+      - name: Get all commit messages in PR
+        id: commits
+        run: |
+          COMMITS=$(gh pr view ${{ github.event.pull_request.number }} --json commits -q ".commits[].message")
+          echo "$COMMITS" > commits.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Check commit messages for Jira code
-              run: |
-                  JIRA_REGEX='[A-Z]{2,}-[0-9]+'
-                  FAIL=0
-                  while IFS= read -r line; do
-                    if ! [[ $line =~ $JIRA_REGEX ]]; then
-                      echo "❌ Commit message missing Jira code: $line"
-                      FAIL=1
-                    fi
-                  done < commits.txt
-                  if [ $FAIL -eq 1 ]; then
-                    echo "Some commits are missing Jira codes."
-                    exit 1
-                  fi
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Validate Jira IDs and Build Markdown Summary
+        id: jira
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          JIRA_REGEX='[A-Z]{2,}-[0-9]+'
+          FAIL=0
+          SUMMARY="### 🧾 Commits and Related Jira Issues\n\n"
+          declare -A SEEN
+
+          while IFS= read -r line; do
+            # Extract all Jira IDs
+            IDS=$(echo "$line" | grep -Eo "$JIRA_REGEX" || true)
+
+            if [ -z "$IDS" ]; then
+              echo "❌ Commit message missing Jira ID: $line"
+              FAIL=1
+              continue
+            fi
+
+            for ID in $IDS; do
+              if [[ -n "${SEEN[$ID]}" ]]; then
+                continue
+              fi
+
+              echo "🔍 Checking Jira issue $ID..."
+              RESPONSE=$(curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
+                -w "%{http_code}" -o /tmp/jira.json \
+                "$JIRA_BASE_URL/rest/api/3/issue/$ID")
+
+              if [ "$RESPONSE" != "200" ]; then
+                echo "❌ Jira issue $ID not found (HTTP $RESPONSE)"
+                FAIL=1
+                continue
+              fi
+
+              SUMMARY+="- [${ID}](${JIRA_BASE_URL}/browse/${ID}) — ${line}\n"
+              SEEN[$ID]=1
+            done
+          done < commits.txt
+
+          if [ $FAIL -eq 1 ]; then
+            echo "❌ Some commits are missing valid Jira IDs."
+            exit 1
+          fi
+
+          echo "$SUMMARY" > summary.md
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat summary.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Update PR description with Jira summary
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body)
+
+          # Remove any previous summary section (between markers)
+          CLEAN_BODY=$(echo "$BODY" | sed '/### 🧾 Commits and Related Jira Issues/,$d')
+
+          # Append fresh summary
+          UPDATED_BODY="${CLEAN_BODY}\n\n${{ steps.jira.outputs.summary }}"
+          echo -e "$UPDATED_BODY" | gh pr edit ${{ github.event.pull_request.number }} --body -
