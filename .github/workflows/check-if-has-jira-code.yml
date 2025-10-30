@@ -23,16 +23,9 @@ jobs:
         run: |
           set -eo pipefail
           echo "🔍 Fetching commits for PR #${{ github.event.pull_request.number }}"
-
-          gh pr view ${{ github.event.pull_request.number }} \
-            --json commits --jq '.commits[].messageHeadline' > commits.txt || true
-
-          echo "✅ Commit messages fetched:"
-          if [ -s commits.txt ]; then
-            cat commits.txt
-          else
-            echo "(no commits found)"
-          fi
+          gh pr view ${{ github.event.pull_request.number }} --json commits --jq '.commits[].messageHeadline' > commits.txt || true
+          echo "✅ Commits fetched:"
+          if [ -s commits.txt ]; then cat commits.txt; else echo "(no commits found)"; fi
 
       - name: Validate Jira IDs and Build Markdown Summary
         id: jira
@@ -70,14 +63,10 @@ jobs:
             fi
 
             for ID in $IDS; do
-              if [[ -n "${SEEN[$ID]:-}" ]]; then
-                continue
-              fi
+              if [[ -n "${SEEN[$ID]:-}" ]]; then continue; fi
 
               echo "🔍 Validating Jira issue: $ID"
-              RESPONSE=$(curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
-                -w "%{http_code}" -o /tmp/jira.json \
-                "$JIRA_BASE_URL/rest/api/3/issue/$ID" || echo "000")
+              RESPONSE=$(curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" -w "%{http_code}" -o /tmp/jira.json "$JIRA_BASE_URL/rest/api/3/issue/$ID" || echo "000")
 
               if [ "$RESPONSE" != "200" ]; then
                 echo "⚠️ Jira issue $ID not found (HTTP $RESPONSE)"
@@ -114,4 +103,4 @@ jobs:
           SUMMARY="${{ steps.jira.outputs.summary }}"
           SUMMARY="${SUMMARY:-}"  # default empty if unset
           UPDATED_BODY="${CLEAN_BODY}\n\n${SUMMARY}"
-          echo -e "$UPDATED_BODY" | gh pr edit ${{ github.event.pull_request.number }} --body -
+          echo -e "$UPDATED_BODY" | gh pr edit ${{ github.event.pull_request.number }} --body - || echo "⚠️ Failed to update PR body, continuing..."
