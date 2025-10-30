@@ -36,18 +36,16 @@ jobs:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           set -eo pipefail
-
           echo "🚀 Starting Jira validation..."
 
-          # Defensive: check environment
+          # Confirm secrets exist
           if [ -z "$JIRA_BASE_URL" ] || [ -z "$JIRA_USER" ] || [ -z "$JIRA_API_TOKEN" ]; then
-            echo "❌ Missing Jira credentials or base URL environment variables."
+            echo "❌ Missing Jira credentials or base URL."
             exit 1
           fi
 
-          # Defensive: check commit file
           if [ ! -f commits.txt ]; then
-            echo "⚠️ commits.txt not found — likely no commits or PR access issue."
+            echo "⚠️ No commits found file."
             {
               echo "summary<<EOF"
               echo "### 🧾 Commits and Related Jira Issues\n\n_No commits found._"
@@ -59,7 +57,7 @@ jobs:
           JIRA_REGEX='[A-Z]{2,}-[0-9]+'
           FAIL=0
           SUMMARY="### 🧾 Commits and Related Jira Issues\n\n"
-          declare -A SEEN
+          SEEN_IDS=""
           COUNT=0
 
           safe_curl() {
@@ -90,7 +88,7 @@ jobs:
             fi
 
             for ID in $IDS; do
-              if [[ -n "${SEEN[$ID]:-}" ]]; then
+              if echo "$SEEN_IDS" | grep -qw "$ID"; then
                 echo "ℹ️ Skipping already validated Jira ID: $ID"
                 continue
               fi
@@ -106,7 +104,7 @@ jobs:
               fi
 
               SUMMARY+="- [${ID}](${JIRA_BASE_URL}/browse/${ID}) — ${CLEAN_LINE}\n"
-              SEEN[$ID]=1
+              SEEN_IDS="$SEEN_IDS $ID"
             done
           done < commits.txt
 
