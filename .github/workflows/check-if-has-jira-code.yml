@@ -36,39 +36,47 @@ jobs:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           set -eo pipefail
+
+          echo "🚀 Starting Jira validation..."
+
+          # Defensive: check environment
+          if [ -z "$JIRA_BASE_URL" ] || [ -z "$JIRA_USER" ] || [ -z "$JIRA_API_TOKEN" ]; then
+            echo "❌ Missing Jira credentials or base URL environment variables."
+            exit 1
+          fi
+
+          # Defensive: check commit file
+          if [ ! -f commits.txt ]; then
+            echo "⚠️ commits.txt not found — likely no commits or PR access issue."
+            {
+              echo "summary<<EOF"
+              echo "### 🧾 Commits and Related Jira Issues\n\n_No commits found._"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           JIRA_REGEX='[A-Z]{2,}-[0-9]+'
           FAIL=0
           SUMMARY="### 🧾 Commits and Related Jira Issues\n\n"
           declare -A SEEN
           COUNT=0
 
-          if [ ! -s commits.txt ]; then
-            echo "⚠️ No commits found in this PR."
-            {
-              echo "summary<<EOF"
-              echo -e "$SUMMARY"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
           safe_curl() {
             local ID=$1
             local HTTP
             set +e
             HTTP=$(curl -s -o /tmp/jira.json -w "%{http_code}" -u "$JIRA_USER:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/3/issue/$ID")
-            CURL_STATUS=$?
+            local STATUS=$?
             set -e
-            if [ $CURL_STATUS -ne 0 ]; then
-              echo "⚠️ curl failed for $ID (exit $CURL_STATUS)"
+            if [ $STATUS -ne 0 ]; then
               echo "000"
               return
             fi
             echo "$HTTP"
           }
 
-          echo "🚀 Starting Jira validation..."
-          while IFS= read -r line; do
+          while IFS= read -r line || [ -n "$line" ]; do
             CLEAN_LINE=$(echo "$line" | tr -d '\r' | xargs)
             [ -z "$CLEAN_LINE" ] && continue
             ((COUNT++))
@@ -88,8 +96,8 @@ jobs:
               fi
 
               echo "🔍 Checking Jira issue: $ID"
-              RESPONSE=$(safe_curl "$ID")
-              echo "🔹 Jira response code: $RESPONSE"
+              RESPONSE=$(safe_curl "$ID" || echo "000")
+              echo "🔹 Jira response: $RESPONSE"
 
               if [ "$RESPONSE" != "200" ]; then
                 echo "⚠️ Jira issue $ID not found or inaccessible (HTTP $RESPONSE)"
