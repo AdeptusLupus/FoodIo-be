@@ -111,6 +111,7 @@ jobs:
           echo "📝 Updating PR description..."
           BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body || echo "")
           CLEAN_BODY=$(echo "$BODY" | sed '/### 🧾 Commits and Related Jira Issues/,$d')
-          SUMMARY="${{ steps.jira.outputs.summary:- }}"
+          SUMMARY="${{ steps.jira.outputs.summary }}"
+          SUMMARY="${SUMMARY:-}"  # default empty if unset
           UPDATED_BODY="${CLEAN_BODY}\n\n${SUMMARY}"
           echo -e "$UPDATED_BODY" | gh pr edit ${{ github.event.pull_request.number }} --body -
