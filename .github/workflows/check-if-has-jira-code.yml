@@ -44,20 +44,35 @@ jobs:
 
           if [ ! -s commits.txt ]; then
             echo "⚠️ No commits found in this PR."
-            echo "summary<<EOF" >> "$GITHUB_OUTPUT"
-            echo -e "$SUMMARY" >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            {
+              echo "summary<<EOF"
+              echo -e "$SUMMARY"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           safe_curl() {
-            curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" -w "%{http_code}" -o /tmp/jira.json "$JIRA_BASE_URL/rest/api/3/issue/$1" || echo "000"
+            local ID=$1
+            local HTTP
+            set +e
+            HTTP=$(curl -s -o /tmp/jira.json -w "%{http_code}" -u "$JIRA_USER:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/3/issue/$ID")
+            CURL_STATUS=$?
+            set -e
+            if [ $CURL_STATUS -ne 0 ]; then
+              echo "⚠️ curl failed for $ID (exit $CURL_STATUS)"
+              echo "000"
+              return
+            fi
+            echo "$HTTP"
           }
 
+          echo "🚀 Starting Jira validation..."
           while IFS= read -r line; do
             CLEAN_LINE=$(echo "$line" | tr -d '\r' | xargs)
             [ -z "$CLEAN_LINE" ] && continue
             ((COUNT++))
+            echo "🔹 Commit #$COUNT: $CLEAN_LINE"
 
             IDS=$(echo "$CLEAN_LINE" | grep -Eo "$JIRA_REGEX" || true)
             if [ -z "$IDS" ]; then
@@ -67,12 +82,19 @@ jobs:
             fi
 
             for ID in $IDS; do
-              if [[ -n "${SEEN[$ID]:-}" ]]; then continue; fi
+              if [[ -n "${SEEN[$ID]:-}" ]]; then
+                echo "ℹ️ Skipping already validated Jira ID: $ID"
+                continue
+              fi
 
-              echo "🔍 Validating Jira issue: $ID"
+              echo "🔍 Checking Jira issue: $ID"
               RESPONSE=$(safe_curl "$ID")
+              echo "🔹 Jira response code: $RESPONSE"
+
               if [ "$RESPONSE" != "200" ]; then
-                echo "⚠️ Jira issue $ID not found (HTTP $RESPONSE)"
+                echo "⚠️ Jira issue $ID not found or inaccessible (HTTP $RESPONSE)"
+              else
+                echo "✅ Jira issue $ID is valid"
               fi
 
               SUMMARY+="- [${ID}](${JIRA_BASE_URL}/browse/${ID}) — ${CLEAN_LINE}\n"
@@ -95,7 +117,7 @@ jobs:
           fi
 
       - name: Update PR description with Jira summary
-        if: success()
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
