@@ -1,0 +1,26 @@
+{
+  "kind": "collectionType",
+  "collectionName": "extras",
+  "info": {
+    "singularName": "extra",
+    "pluralName": "extras",
+    "displayName": "Extras"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "price": {
+      "type": "decimal"
+    },
+    "isAvailable": {
+      "type": "boolean",
+      "required": true
+    }
+  }
+}
