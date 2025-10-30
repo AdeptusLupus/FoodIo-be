@@ -21,14 +21,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eo pipefail
           echo "🔍 Fetching commits for PR #${{ github.event.pull_request.number }}"
 
           gh pr view ${{ github.event.pull_request.number }} \
             --json commits --jq '.commits[].messageHeadline' > commits.txt || true
 
-          echo "✅ Commits fetched:"
-          cat commits.txt || echo "(no commits found)"
+          echo "✅ Commit messages fetched:"
+          if [ -s commits.txt ]; then
+            cat commits.txt
+          else
+            echo "(no commits found)"
+          fi
 
       - name: Validate Jira IDs and Build Markdown Summary
         id: jira
@@ -38,7 +42,7 @@ jobs:
           JIRA_USER: ${{ secrets.JIRA_USER }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eo pipefail
           JIRA_REGEX='[A-Z]{2,}-[0-9]+'
           FAIL=0
           SUMMARY="### 🧾 Commits and Related Jira Issues\n\n"
@@ -47,6 +51,9 @@ jobs:
 
           if [ ! -s commits.txt ]; then
             echo "⚠️ No commits found in this PR."
+            echo "summary<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$SUMMARY" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -67,7 +74,7 @@ jobs:
                 continue
               fi
 
-              echo "🔍 Checking Jira issue $ID..."
+              echo "🔍 Validating Jira issue: $ID"
               RESPONSE=$(curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
                 -w "%{http_code}" -o /tmp/jira.json \
                 "$JIRA_BASE_URL/rest/api/3/issue/$ID" || echo "000")
@@ -84,26 +91,26 @@ jobs:
           echo "✅ Processed $COUNT commits"
           echo -e "$SUMMARY"
 
-          if [ $FAIL -eq 1 ]; then
-            echo "❌ Some commits are missing Jira IDs."
-            exit 1
-          fi
-
           {
             echo "summary<<EOF"
             echo -e "$SUMMARY"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+          if [ $FAIL -eq 1 ]; then
+            echo "❌ Some commits are missing Jira IDs."
+            exit 1
+          fi
+
       - name: Update PR description with Jira summary
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eo pipefail
           echo "📝 Updating PR description..."
           BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body || echo "")
           CLEAN_BODY=$(echo "$BODY" | sed '/### 🧾 Commits and Related Jira Issues/,$d')
-          SUMMARY="${{ steps.jira.outputs.summary }}"
+          SUMMARY="${{ steps.jira.outputs.summary:- }}"
           UPDATED_BODY="${CLEAN_BODY}\n\n${SUMMARY}"
           echo -e "$UPDATED_BODY" | gh pr edit ${{ github.event.pull_request.number }} --body -
