@@ -1,0 +1,61 @@
+{
+  "kind": "singleType",
+  "collectionName": "settings",
+  "info": {
+    "singularName": "setting",
+    "pluralName": "settings",
+    "displayName": "Settings"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "banner": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "color": {
+      "type": "string",
+      "regex": "^#(?:[A-Fa-f0-9]{8}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{4}|[A-Fa-f0-9]{3})$"
+    },
+    "address": {
+      "type": "string"
+    },
+    "phone_number": {
+      "type": "string",
+      "regex": "^(?:\\+?55\\s?)?(?:\\(?[1-9][0-9]\\)?\\s?)?(?:9?\\d{4})[-\\s]?\\d{4}$"
+    },
+    "email": {
+      "type": "string",
+      "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+    },
+    "open_at": {
+      "type": "time",
+      "default": "17:00:00.000"
+    },
+    "close_at": {
+      "type": "time",
+      "default": "23:59:00.000"
+    }
+  }
+}

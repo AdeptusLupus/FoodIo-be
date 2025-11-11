@@ -430,62 +430,36 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiExtraExtra extends Struct.CollectionTypeSchema {
-  collectionName: 'extras';
+export interface ApiSettingSetting extends Struct.SingleTypeSchema {
+  collectionName: 'settings';
   info: {
-    displayName: 'Extras';
-    pluralName: 'extras';
-    singularName: 'extra';
+    displayName: 'Settings';
+    pluralName: 'settings';
+    singularName: 'setting';
   };
   options: {
     draftAndPublish: true;
   };
   attributes: {
+    address: Schema.Attribute.String;
+    banner: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    close_at: Schema.Attribute.Time &
+      Schema.Attribute.DefaultTo<'23:59:00.000'>;
+    color: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    isAvailable: Schema.Attribute.Boolean & Schema.Attribute.Required;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<'oneToMany', 'api::extra.extra'> &
-      Schema.Attribute.Private;
-    name: Schema.Attribute.String & Schema.Attribute.Required;
-    price: Schema.Attribute.Decimal;
-    publishedAt: Schema.Attribute.DateTime;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-  };
-}
-
-export interface ApiProductProduct extends Struct.CollectionTypeSchema {
-  collectionName: 'products';
-  info: {
-    displayName: 'Products';
-    pluralName: 'products';
-    singularName: 'product';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    description: Schema.Attribute.Blocks;
-    extras: Schema.Attribute.Relation<'oneToMany', 'api::extra.extra'>;
-    images: Schema.Attribute.Media<
-      'images' | 'files' | 'videos' | 'audios',
-      true
-    >;
-    isAvailable: Schema.Attribute.Boolean & Schema.Attribute.Required;
+    email: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
-      'api::product.product'
+      'api::setting.setting'
     > &
       Schema.Attribute.Private;
-    name: Schema.Attribute.String & Schema.Attribute.Required;
-    price: Schema.Attribute.Decimal;
+    logo: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    name: Schema.Attribute.String;
+    open_at: Schema.Attribute.Time & Schema.Attribute.DefaultTo<'17:00:00.000'>;
+    phone_number: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -1003,8 +977,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
-      'api::extra.extra': ApiExtraExtra;
-      'api::product.product': ApiProductProduct;
+      'api::setting.setting': ApiSettingSetting;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
       'plugin::i18n.locale': PluginI18NLocale;
