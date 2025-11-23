@@ -1,0 +1,53 @@
+{
+  "kind": "collectionType",
+  "collectionName": "produtos",
+  "info": {
+    "singularName": "produto",
+    "pluralName": "produtos",
+    "displayName": "Produtos"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "richtext",
+      "required": true
+    },
+    "price": {
+      "type": "decimal"
+    },
+    "descounted_price": {
+      "type": "decimal"
+    },
+    "images": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "is_optional": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_multiselect": {
+      "type": "boolean",
+      "default": false
+    },
+    "abas": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::aba.aba",
+      "mappedBy": "produtos"
+    }
+  }
+}
