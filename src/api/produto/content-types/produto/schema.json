@@ -35,19 +35,16 @@
         "audios"
       ]
     },
-    "is_optional": {
-      "type": "boolean",
-      "default": true
-    },
-    "is_multiselect": {
-      "type": "boolean",
-      "default": false
-    },
     "abas": {
       "type": "relation",
       "relation": "manyToMany",
       "target": "api::aba.aba",
       "mappedBy": "produtos"
+    },
+    "preferencies": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::preferencia.preferencia"
     }
   }
 }

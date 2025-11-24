@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "preferencias",
+  "info": {
+    "singularName": "preferencia",
+    "pluralName": "preferencias",
+    "displayName": "Preferencias"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "isQuantitative": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    },
+    "quantitativeLimit": {
+      "type": "integer",
+      "conditions": {
+        "visible": {
+          "==": [
+            {
+              "var": "isQuantitative"
+            },
+            true
+          ]
+        }
+      },
+      "min": 0,
+      "max": 100
+    },
+    "isOptional": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    },
+    "preferencias_items": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::preferencias-item.preferencias-item"
+    },
+    "produtos": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::produto.produto"
+    }
+  }
+}

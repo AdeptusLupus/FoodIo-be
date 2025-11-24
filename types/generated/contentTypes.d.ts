@@ -430,12 +430,12 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiExtraExtra extends Struct.CollectionTypeSchema {
-  collectionName: 'extras';
+export interface ApiAbaAba extends Struct.CollectionTypeSchema {
+  collectionName: 'abas';
   info: {
-    displayName: 'Extras';
-    pluralName: 'extras';
-    singularName: 'extra';
+    displayName: 'Abas';
+    pluralName: 'abas';
+    singularName: 'aba';
   };
   options: {
     draftAndPublish: true;
@@ -444,25 +444,80 @@ export interface ApiExtraExtra extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    isAvailable: Schema.Attribute.Boolean & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<'oneToMany', 'api::extra.extra'> &
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::aba.aba'> &
       Schema.Attribute.Private;
-    name: Schema.Attribute.String & Schema.Attribute.Required;
-    price: Schema.Attribute.Decimal;
+    order: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      >;
+    produtos: Schema.Attribute.Relation<'manyToMany', 'api::produto.produto'>;
     publishedAt: Schema.Attribute.DateTime;
+    tab_name: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
   };
 }
 
-export interface ApiProductProduct extends Struct.CollectionTypeSchema {
-  collectionName: 'products';
+export interface ApiPreferenciaPreferencia extends Struct.CollectionTypeSchema {
+  collectionName: 'preferencias';
   info: {
-    displayName: 'Products';
-    pluralName: 'products';
-    singularName: 'product';
+    displayName: 'Preferencias';
+    pluralName: 'preferencias';
+    singularName: 'preferencia';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    isOptional: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    isQuantitative: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::preferencia.preferencia'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    preferencias_items: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::preferencias-item.preferencias-item'
+    >;
+    produtos: Schema.Attribute.Relation<'oneToMany', 'api::produto.produto'>;
+    publishedAt: Schema.Attribute.DateTime;
+    quantitativeLimit: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiPreferenciasItemPreferenciasItem
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'preferencias_items';
+  info: {
+    displayName: 'Preferencias Item';
+    pluralName: 'preferencias-items';
+    singularName: 'preferencias-item';
   };
   options: {
     draftAndPublish: true;
@@ -472,19 +527,60 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Blocks;
-    extras: Schema.Attribute.Relation<'oneToMany', 'api::extra.extra'>;
+    image: Schema.Attribute.Media<'images'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::preferencias-item.preferencias-item'
+    > &
+      Schema.Attribute.Private;
+    Name: Schema.Attribute.String & Schema.Attribute.Required;
+    price: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      >;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiProdutoProduto extends Struct.CollectionTypeSchema {
+  collectionName: 'produtos';
+  info: {
+    displayName: 'Produtos';
+    pluralName: 'produtos';
+    singularName: 'produto';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    abas: Schema.Attribute.Relation<'manyToMany', 'api::aba.aba'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    descounted_price: Schema.Attribute.Decimal;
+    description: Schema.Attribute.RichText & Schema.Attribute.Required;
     images: Schema.Attribute.Media<
       'images' | 'files' | 'videos' | 'audios',
       true
     >;
-    isAvailable: Schema.Attribute.Boolean & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
-      'api::product.product'
+      'api::produto.produto'
     > &
       Schema.Attribute.Private;
     name: Schema.Attribute.String & Schema.Attribute.Required;
+    preferencies: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::preferencia.preferencia'
+    >;
     price: Schema.Attribute.Decimal;
     publishedAt: Schema.Attribute.DateTime;
     updatedAt: Schema.Attribute.DateTime;
@@ -1003,8 +1099,10 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
-      'api::extra.extra': ApiExtraExtra;
-      'api::product.product': ApiProductProduct;
+      'api::aba.aba': ApiAbaAba;
+      'api::preferencia.preferencia': ApiPreferenciaPreferencia;
+      'api::preferencias-item.preferencias-item': ApiPreferenciasItemPreferenciasItem;
+      'api::produto.produto': ApiProdutoProduto;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
       'plugin::i18n.locale': PluginI18NLocale;

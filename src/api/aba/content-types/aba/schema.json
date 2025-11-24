@@ -15,27 +15,6 @@
       "type": "string",
       "required": true
     },
-    "type": {
-      "type": "enumeration",
-      "required": true,
-      "enum": [
-        "Escolhido a mão",
-        "Promoções",
-        "Pratos Principais",
-        "Entradas",
-        "Acompanhamentos",
-        "Combo",
-        "Burgers",
-        "Pizzas Grandes",
-        "Pizzas Medias",
-        "Pizzas Pequenas",
-        "Pizzas Tradicionais",
-        "Bebidas",
-        "Novos",
-        "Recentes",
-        "Outros"
-      ]
-    },
     "produtos": {
       "type": "relation",
       "relation": "manyToMany",
